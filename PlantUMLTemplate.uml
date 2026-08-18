@@ -1,0 +1,204 @@
+@startuml
+
+'-------------------------------------------------------------------
+' блок настроек вида диаграммы и определения стилей (не менять!!!)
+'-------------------------------------------------------------------
+hide stereotype
+!pragma teoz true
+skinparam titleBorderRoundCorner 10
+skinparam titleBorderColor lightsteelblue
+skinparam BoxPadding 5
+skinparam sequenceReferenceBackgroundColor LightYellow
+hide unlinked
+skinparam MaxMessageSize 130
+!$funcWidth = 170
+!$noteWidth = 150
+<style>
+title { FontSize 20; Margin 20 }
+sequenceDiagram {
+.sysU { BackGroundColor: #D5E8D4; HorizontalAlignment: center; RoundCorner: 5 }  /* АС/ФП используется (Used) */
+.sysC { BackGroundColor: #D5E8D4; LineColor: #FF00FF; HorizontalAlignment: center; RoundCorner: 5 } /* АС/ФП дорабатывается (Changed) */
+.sysN { BackGroundColor: #FFFF88; LineColor: #FF00FF; HorizontalAlignment: center; LineThickness: 2; RoundCorner: 5 } /* АС/ФП создается (New) */
+.sysD { BackGroundColor: #BAC8D3; LineColor: #23445D; HorizontalAlignment: center; RoundCorner: 5 } /* АС/ФП выводится (Deleted) */
+.sysM { BackGroundColor: #E1D5E7; HorizontalAlignment: center; RoundCorner: 5 } /* АС/ФП нецелевая (MisUsed) */
+.sysE { BackGroundColor: #DAE8FC; HorizontalAlignment: center; RoundCorner: 5 } /* АС/ФП внешняя (External) */
+.sysO { BackGroundColor: #FFFF88; LineColor: #BD7000; HorizontalAlignment: center; LineThickness: 2; RoundCorner: 5 } /* АС/ФП создается в другом проекте */
+.sysChO { BackGroundColor: #D5E8D4; LineColor: #BD7000; HorizontalAlignment: center; LineThickness: 1; RoundCorner: 5 } /* АС/ФП дорабатывается в другом проекте */
+.funcU { BackGroundColor: #D5E8D4; HorizontalAlignment: center; RoundCorner: 15; MaximumWidth: $funcWidth } /* функциональность используется (Used) */
+.funcC { BackGroundColor: #D5E8D4; LineColor: #FF00FF; HorizontalAlignment: center; RoundCorner: 15; MaximumWidth: $funcWidth } /* функциональность дорабатывается (Changed) */
+.funcN { BackGroundColor: #FFFF88; LineColor: #FF00FF; HorizontalAlignment: center; LineThickness: 2; RoundCorner: 15; MaximumWidth: $funcWidth } /* функциональность создается (New) */
+.funcD { BackGroundColor: #BAC8D3; LineColor: #23445D; HorizontalAlignment: center; LineStyle: dotted; RoundCorner: 15; MaximumWidth: $funcWidth } /* функциональность выводится (Deleted) */
+.funcO { BackGroundColor: #FFFF88; LineColor: #BD7000; HorizontalAlignment: center; LineThickness: 2; RoundCorner: 15; MaximumWidth: $funcWidth } /* функциональность создается в другом проекте (Other project) */
+.funcChO { BackGroundColor: #D5E8D4; LineColor: #BD7000; HorizontalAlignment: center; LineThickness: 1; RoundCorner: 15; MaximumWidth: $funcWidth } /* функциональность дорабатывается в другом проекте (Changed Other project) */
+.integU { BackGroundColor: #D5E8D4; HorizontalAlignment: left } /* интеграция используется (Used) */
+.integC { BackGroundColor: #D5E8D4; LineColor: #FF00FF; HorizontalAlignment: left } /* интеграция дорабатывается (Changed) */
+.integN { BackGroundColor: #FFFF88; LineColor: #FF00FF; HorizontalAlignment: left; LineThickness: 2 } /* интеграция новая (New) */
+.integD { LineColor: #CDA2BE; FontColor: #CDA2BE; HorizontalAlignment: left } /* интеграция выводится (Deleted) */
+.integO { LineColor: #BD7000; HorizontalAlignment: left } /* интеграция создается/дорабатывается в другом проекте */
+.alignC { HorizontalAlignment: center } /* выровнять текст по центру */
+.alignR { HorizontalAlignment: right } /* выровнять текст вправо */
+.alignL { HorizontalAlignment: left } /* выровнять текст влево */
+.noteWidth { MaximumWidth: $noteWidth } /* применение ширины заметки */
+.noteATD { MaximumWidth: $noteWidth; BackGroundColor: #FFCCFF } /* Архитектурно-технологический долг */
+.otherProj { LineColor: #BD7000 } /* АС/ФП/функциональность/интеграция другого проекта */
+.fontSmall { FontSize: 10 } /* Мелкий шрифт */
+.noBack { BackGroundColor: #transparent } /* Нет заливки */
+.lineThick { LineThickness: 2 } /* Толстая линия */
+.lineThin { LineThickness: 1 } /* Тонкая линия */
+}
+</style>
+
+
+'-------------------------------------------------------------------
+' конец блока настроек вида диаграммы и определения стилей
+'-------------------------------------------------------------------
+
+'-------------------------------------------------------------------
+' блок определения участников
+'-------------------------------------------------------------------
+'Клиент или\n сотрудник
+Actor "Клиент или \n сотрудник" as user <<sysU>>
+
+box "Группа АС N 1" #EDF8E3
+'исп.АС
+participant "Используемая\n АС" as ASU <<sysU>>
+'дор.АС
+participant "Дорабатываемая\n АС" as ASC <<sysC>>
+'нов.АС
+participant "Новая\n АС" as ASN <<sysN>>
+'другой\n проект\n новая АС
+participant "АС\n создаваемая\n в другом\n проекте" as ASO <<sysO>>
+
+'другой\n проект\n дорабатываемая\n АС
+participant "АС\n дорабатываемая\n в другом\n проекте" as ASChO <<sysChO>>
+
+end box
+
+box "Группа групп АС N 1" #FDE2E2
+box "Группа АС N 3" #FFF3E5
+'выв.АС
+participant "Выводимая\n АС" as ASD <<sysD>>
+'нец.АС
+participant "Нецелевая\n АС" as ASmis <<sysM>>
+end box
+
+box #FFFFEB
+'внеш.АС
+participant "Внешняя\n АС" as ASext <<sysE>>
+end box
+end box
+
+'-------------------------------------------------------------------
+' блок интеграций и взаимодействия
+'-------------------------------------------------------------------
+
+
+'шаблоны автонумерации - жирный с точкой после номера
+'оставить нужный
+'одноуровневый
+autonumber "<b>###'.'"
+
+'многоуровневый, автоматически нумеруется только последня цифра
+autonumber "<b>'1.1.'###'.'"
+
+title: Форматирование sequence диаграммы
+
+==Разделитель 1.==
+autonumber "<b>'1.'###'.'"
+
+user ->> ASU <<alignL>>: Действие или данные пользователя
+'добавить отступ в пикселях
+||10||
+rnote over ASU <<funcU>> : Используемая функциональность
+&note right ASC <<noteWidth>> <<alignL>>: Заметка справа
+
+ASU -> ASC <<integU>>: Используемая интеграция
+activate ASC
+'добавить стандартный отступ
+|||
+rnote over ASC <<funcC>> : Дорабатываемая функциональность
+
+&note over ASD <<noteWidth>> <<alignC>>: Заметка поверх
+
+==Разделитель 2==
+autonumber "<b>'2.1.'###'.'"
+
+rnote over user <<sysU>> <<noBack>> <<fontSmall>>: Клиент или\n сотрудник
+& rnote over ASU <<sysU>> <<noBack>> <<fontSmall>>: исп.АС
+& rnote over ASC <<sysC>> <<noBack>> <<fontSmall>>: дор.АС
+& rnote over ASN <<sysN>> <<noBack>> <<fontSmall>>: нов.АС
+& rnote over ASO <<sysO>> <<noBack>> <<fontSmall>>: другой\n проект\n новая АС
+& rnote over ASChO <<sysChO>> <<noBack>> <<fontSmall>>: другой\n проект\n дорабатываемая\n АС
+& rnote over ASD <<sysD>> <<noBack>> <<fontSmall>>: выв.АС
+& rnote over ASmis <<sysM>> <<noBack>> <<fontSmall>>: нец.АС
+& rnote over ASext <<sysE>> <<noBack>> <<fontSmall>>: внеш.АС
+
+note across
+↑↑↑ Промежуточные заголовки для "длинных" диаграмм. ↑↑↑
+Код формируется из готовой диаграммы с использованием "UML Seq - заголовки для АС v006.xlsx",
+и вставляется в нужные места диаграммы.
+end note
+
+ASC ->> ASmis <<integC>>: Дорабатываемая интеграция
+& ASmis ->> ASext <<integC>>: Дорабатываемая интеграция
+
+autonumber stop
+ASext ->> ASD <<integD>> : Выводимая интеграция
+rnote over ASD <<funcD>>: Выводимая функциональность
+
+& note right ASmis <<noteATD>>: АТД использования выводимой функциональности
+& note left ASN <<noteWidth>> <<alignR>>: Заметка слева с автопереносом слов
+
+ASD ->> ASC <<integD>> : Выводимая интеграция
+autonumber resume
+ASext ->> ASN <<integN>>: Новая интеграция
+rnote over ASN <<funcN>>: Новая функциональность
+ASN -->> ASC <<integN>>: Новая интеграция
+deactivate ASC
+
+ASC -> ASO <<integO>> <<lineThick>>: Интеграция, реализуемая в другом проекте
+rnote over ASO <<funcO>>: Функциональность, реализуемая в другом проекте
+ASC -> ASChO <<integO>> <<lineThick>>: Интеграция, реализуемая в другом проекте
+rnote over ASChO <<funcChO>> <<otherProj>>: Функциональность дорабатывается в другом проекте
+
+ASO <-- ASChO <<integO>> <<lineThick>>: Интеграция, реализуемая в другом проекте
+& ASC <-- ASO <<integO>> <<lineThick>>: Интеграция, реализуемая в другом проекте
+
+
+'новый уровень нумерации
+autonumber "<b>'2.2.'###'.'"
+
+alt условие первое
+ASC -> ASmis <<integU>>: Интеграция условие первое
+ASC <-- ASmis <<integU>>: Интеграция условие первое (ответ)
+else условие второе
+
+'новый уровень нумерации
+autonumber "<b>'2.3.'###'.'"
+
+ASC -> ASU <<integU>>: Интеграция условие второе
+ASC <-- ASU <<integU>>: Интеграция условие второе (ответ)
+else условие третье
+
+'новый уровень нумерации
+autonumber "<b>'2.4.'###'.'"
+
+ASC -> ASN <<integN>>: Интеграция условие третье
+ASC <-- ASN <<integN>>: Интеграция условие третье (ответ)
+end
+
+'новый уровень нумерации
+autonumber "<b>'2.5.'###'.'"
+
+rnote over ASC <<funcC>> <<alignL>>
+__Дорабатываемая функциональность (многострочная)__:
+ • функция первая (используется)
+<font color=#FF00FF> ~ функция вторая (дорабатывается)
+<font color=#FF00FF>** + функция третья (новая)**
+<font color=#CDA2BE> x функция четвертая (выводится)
+end rnote
+
+ASC --> ASU <<integU>>: Используемая\n интеграция
+&ASU -->o user <<integU>>: Используемая\n интеграция
+
+@enduml
