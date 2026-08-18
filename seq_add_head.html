@@ -1,0 +1,235 @@
+<!-- Файл: seq_add_head.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Добавление промежуточных заголовков в PlantUML Sequence</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    .container { display: flex; flex-direction: column; gap: 10px; }
+    textarea { width: 100%; height: 300px; font-family: monospace; font-size: 14px; }
+    .buttons { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; flex-wrap: wrap; }
+    button { padding: 8px 16px; font-size: 14px; cursor: pointer; }
+    label { font-size: 14px; display: flex; align-items: center; gap: 5px; }
+    .toast {
+      position: fixed; bottom: 20px; right: 20px;
+      background: #333; color: white; padding: 10px 20px;
+      border-radius: 4px; opacity: 0; transition: opacity 0.3s;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <h2>Добавление промежуточных заголовков в PlantUML Sequence Diagram</h2>
+  <div class="container">
+    <div class="buttons">
+      <button id="addHeadersBtn">Добавить промежуточные заголовки</button>
+      <button id="copyBtn">Скопировать дополненный заголовками код</button>
+      <label>
+        <input type="checkbox" id="removeExisting" checked> Удалять существующие промежуточные итоги
+      </label>
+    </div>
+    <textarea id="inputArea" placeholder="Вставьте код PlantUML Sequence Diagram"></textarea>
+    <textarea id="outputArea" placeholder="Результат с добавленными заголовками" readonly></textarea>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    (function() {
+      var inputArea = document.getElementById('inputArea');
+      var outputArea = document.getElementById('outputArea');
+      var addHeadersBtn = document.getElementById('addHeadersBtn');
+      var copyBtn = document.getElementById('copyBtn');
+      var removeExistingCb = document.getElementById('removeExisting');
+      var toast = document.getElementById('toast');
+
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(function() { toast.classList.remove('show'); }, 2000);
+      }
+
+      // Удаление существующих промежуточных заголовков (строк, содержащих <<noBack>> <<fontSmall>>)
+      function removeExistingHeaders(lines) {
+        return lines.filter(function(line) {
+          return line.indexOf('<<noBack>> <<fontSmall>>') === -1;
+        });
+      }
+
+      // Проверка, является ли строка шагом диаграммы (для подсчёта)
+      function isStepLine(line) {
+        var t = line.trim();
+        if (!t) return false;
+        if (t.startsWith("'") || t.startsWith("@") || t.startsWith("!") ||
+            t.startsWith("title") || t.startsWith("autonumber") ||
+            t.startsWith("hide") || t.startsWith("skinparam")) return false;
+        if (t.indexOf('<<noBack>> <<fontSmall>>') !== -1) return false;
+        // Строки, начинающиеся с '&', не считаются отдельным шагом
+        if (t.startsWith('&')) return false;
+        // Основные критерии: начало с ключевых слов или наличие стрелок
+        if (/^(==|rnote|note|lnote)/.test(t)) return true;
+        if (t.indexOf('->') !== -1 || t.indexOf('<-') !== -1) return true;
+        return false;
+      }
+
+      // Проверка, является ли строка объявлением участника (любой тип, регистронезависимо)
+      function isParticipantDeclaration(line) {
+        return /^(participant|actor|boundary|control|entity|database|collections)\s+"(.*?)"\s+as\s+[\w.]+/i.test(line);
+      }
+
+      // Извлечение участников и их коротких имён
+      function extractParticipants(lines) {
+        var participants = [];
+        var aliasMap = {};
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          var match = line.match(/^(participant|actor|boundary|control|entity|database|collections)\s+"(.*?)"\s+as\s+([\w.]+)\s*(?:<<(\w+)>>)?/i);
+          if (match) {
+            var keyword = match[1];
+            var name = match[2]; // сохраняем \n как есть
+            var alias = match[3];
+            var style = match[4] || 'sysU';
+            var shortName = name; // по умолчанию используем полное имя
+            // Ищем комментарий на предыдущей непустой строке
+            var j = i - 1;
+            while (j >= 0 && lines[j].trim() === '') j--;
+            if (j >= 0) {
+              var prev = lines[j].trim();
+              if (prev.startsWith("'") && !prev.startsWith("' box_id=")) {
+                var commentText = prev.substring(1).trim();
+                if (commentText.length > 0) {
+                  // Если есть комментарий, используем его вместо полного имени
+                  shortName = commentText;
+                }
+              }
+            }
+            var participant = { name: name, alias: alias, style: style, shortName: shortName };
+            participants.push(participant);
+            aliasMap[alias] = participant;
+          }
+        }
+        return { participants: participants, aliasMap: aliasMap };
+      }
+
+      // Собрать множество используемых алиасов
+      function collectUsedAliases(lines, aliasMap) {
+        var used = new Set();
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line || line.startsWith("'") || line.startsWith("@") || line.startsWith("!")) continue;
+          if (isParticipantDeclaration(line)) continue;
+          var words = line.split(/[\s,:;()]+/).filter(function(w) { return w.length > 0; });
+          for (var w = 0; w < words.length; w++) {
+            var word = words[w];
+            if (aliasMap.hasOwnProperty(word)) {
+              used.add(word);
+            }
+          }
+        }
+        return used;
+      }
+
+      // Найти индекс первой строки, с которой начинается основная часть диаграммы
+      function findFirstStepIndex(lines) {
+        for (var i = 0; i < lines.length; i++) {
+          if (isStepLine(lines[i])) {
+            return i;
+          }
+        }
+        return -1;
+      }
+
+      // Основная функция обработки
+      function addHeaders() {
+        var inputText = inputArea.value;
+        if (!inputText.trim()) {
+          showToast('Введите код PlantUML');
+          return;
+        }
+
+        var lines = inputText.split('\n');
+
+        if (removeExistingCb.checked) {
+          lines = removeExistingHeaders(lines);
+        }
+
+        var parts = extractParticipants(lines);
+        var participants = parts.participants;
+        var aliasMap = parts.aliasMap;
+
+        if (participants.length === 0) {
+          showToast('Не найдено ни одного участника (participant, actor, ...)');
+          return;
+        }
+
+        var usedAliases = collectUsedAliases(lines, aliasMap);
+
+        var firstStepIdx = findFirstStepIndex(lines);
+        if (firstStepIdx === -1) {
+          outputArea.value = lines.join('\n');
+          showToast('В диаграмме не найдено действий (стрелок, rnote и т.п.). Заголовки не добавлены.');
+          return;
+        }
+
+        var resultLines = [];
+        var stepCounter = 0;
+        var pendingHeader = false;
+
+        function insertHeaderBlock() {
+          resultLines.push('');
+          for (var p = 0; p < participants.length; p++) {
+            var part = participants[p];
+            if (usedAliases.has(part.alias)) {
+              var prefix = (p === 0) ? 'rnote over ' : '& rnote over ';
+              // Используем shortName, которое равно либо полному имени, либо комментарию
+              resultLines.push(prefix + part.alias + ' <<' + part.style + '>> <<noBack>> <<fontSmall>>: ' + part.shortName);
+            }
+          }
+          resultLines.push('');
+          pendingHeader = false;
+        }
+
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          var trimmed = line.trim();
+
+          if (i >= firstStepIdx && isStepLine(trimmed)) {
+            stepCounter++;
+            if (stepCounter % 10 === 0) {
+              pendingHeader = true;
+            }
+            if (pendingHeader) {
+              insertHeaderBlock();
+            }
+            resultLines.push(line);
+          } else if (trimmed.startsWith('&') && i >= firstStepIdx) {
+            resultLines.push(line);
+          } else {
+            resultLines.push(line);
+          }
+        }
+
+        outputArea.value = resultLines.join('\n');
+        showToast('Заголовки добавлены');
+      }
+
+      function copyToClipboard() {
+        var text = outputArea.value;
+        if (!text) {
+          showToast('Нет данных для копирования');
+          return;
+        }
+        navigator.clipboard.writeText(text).then(function() {
+          showToast('Код скопирован');
+        }).catch(function() {
+          showToast('Ошибка копирования');
+        });
+      }
+
+      addHeadersBtn.addEventListener('click', addHeaders);
+      copyBtn.addEventListener('click', copyToClipboard);
+    })();
+  </script>
+</body>
+</html>
+<!-- Конец файла: seq_add_head.html -->
